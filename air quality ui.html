@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Air Quality — Mobile App Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#020617;
+    --bg-2:#071126;
+    --muted:#9fb0c8;
+    --glass: rgba(255,255,255,0.03);
+    --accent:#f59e0b;
+    --accent2:#3b82f6;
+    --card-radius:18px;
+    --padding:14px;
+  }
+
+  html,body{height:100%;margin:0}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background: linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    display:flex;align-items:center;justify-content:center;padding:12px;color:#eaf2ff;
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
+
+  /* Mobile card: portrait-first */
+  .card{
+    width:100%;
+    max-width:420px;
+    border-radius:var(--card-radius);
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.006));
+    padding:var(--padding);
+    border:1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 18px 40px rgba(2,6,23,0.6);
+    display:flex;flex-direction:column;gap:12px;
+    overflow:hidden;
+  }
+
+  .header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .title{display:flex;align-items:center;gap:10px}
+  .logo{
+    width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03)
+  }
+  .label{font-weight:800;font-size:18px}
+  .subtitle{color:var(--muted);font-weight:600;font-size:12px}
+
+  .controls{display:flex;gap:8px;align-items:center}
+  .btn{
+    padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);
+    background:transparent;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;
+  }
+  .btn.primary{background:linear-gradient(90deg,var(--accent2),var(--accent));color:#071026;border:none}
+
+  /* main block: compact for mobile */
+  .main{
+    display:flex;flex-direction:column;gap:10px;align-items:center;
+    padding:8px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(255,255,255,0.03)
+  }
+
+  .aqi-row{
+    display:flex;flex-direction:row;align-items:center;gap:12px;width:100%;justify-content:space-between;
+  }
+
+  .aqi-box{
+    display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-left:6px;
+  }
+  .aqi-value{font-size:48px;font-weight:900;line-height:1}
+  .aqi-category{font-weight:700;color:var(--muted);font-size:13px}
+
+  .bubble{flex:1;display:flex;flex-direction:column;gap:8px;width:100%}
+
+  .scale{
+    height:12px;border-radius:999px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.03);
+    background: linear-gradient(90deg,#10b981 0%, #f59e0b 33%, #f97316 50%, #ef4444 70%, #a855f7 90%);
+    width:100%;
+  }
+  .thumb{
+    position:absolute;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;border:3px solid #fff;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+    transition:left .45s cubic-bezier(.2,.9,.2,1);
+    box-shadow:0 8px 18px rgba(2,6,23,0.45);
+  }
+
+  .scale-labels{display:flex;justify-content:space-between;color:var(--muted);font-weight:700;font-size:11px;margin-top:6px}
+
+  .pol-list{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:space-between}
+  .pol{
+    flex:0 0 calc(33% - 8px);
+    min-width:88px;background:rgba(255,255,255,0.02);border-radius:10px;padding:8px;border:1px solid rgba(255,255,255,0.02);text-align:center;
+  }
+  .pol small{color:var(--muted);font-weight:700}
+  .pol .val{font-weight:800;font-size:18px;margin-top:6px}
+
+  .spark-wrap{width:100%;height:44px;margin-top:6px;display:flex;align-items:center;justify-content:center}
+  #spark{width:100%;height:44px}
+
+  .advice{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px solid rgba(255,255,255,0.02);font-weight:700;font-size:13px}
+  .ad-dot{width:10px;height:10px;border-radius:50%}
+
+  /* modal */
+  .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(0,0,0,0.5), rgba(0,0,0,0.5));z-index:1200}
+  .panel{width:92%;max-width:420px;background:linear-gradient(180deg,#020617,#071126);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);color:#eaf2ff}
+
+  /* export canvas hidden */
+  canvas#exportCanvas{display:none}
+
+  @media (max-width:360px){
+    .aqi-value{font-size:42px}
+    .pol{flex:0 0 calc(50% - 8px);min-width:120px}
+  }
+</style>
+</head>
+<body>
+  <div class="card" id="aqCard" role="article" aria-label="Air quality card">
+    <div class="header">
+      <div class="title">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" ry="3" stroke="#cbd5e1" stroke-width="1.2" fill="none" /><path d="M7 8h10" stroke="#cbd5e1" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div class="label">Air Quality</div>
+          <div class="subtitle" id="locLabel">Ranchi · Updated now</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="infoBtn" aria-label="info">i</button>
+        <button class="btn" id="exportBtn" aria-label="export">Export</button>
+        <button class="btn primary" id="saveBtn" aria-pressed="false">Save</button>
+      </div>
+    </div>
+
+    <div class="main" id="mainBlock">
+      <div class="aqi-row">
+        <div class="aqi-box">
+          <div class="small">AQI</div>
+          <div class="aqi-value" id="aqValue">100</div>
+          <div class="aqi-category" id="aqCategory">Moderate</div>
+          <div class="small" style="margin-top:6px">Main Pollutant: <span id="mainPoll">PM2_5</span></div>
+        </div>
+
+        <div class="bubble" style="align-items:stretch">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="flex:1">
+              <div class="scale" id="aqScale" role="img" aria-label="AQI scale">
+                <div class="thumb" id="scaleThumb" style="left:45%"></div>
+              </div>
+              <div class="scale-labels"><div>Good</div><div>Fair</div><div>Unhealthy</div><div>Very</div><div>Hazard</div></div>
+            </div>
+            <div style="width:110px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+              <div class="small">Trend</div>
+              <div class="spark-wrap"><svg id="spark" viewBox="0 0 220 44" preserveAspectRatio="none"></svg></div>
+              <div class="small" id="windVal">E 9.8 km/h</div>
+            </div>
+          </div>
+
+          <div class="pol-list" id="polList" aria-hidden="false"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="advice">
+      <div class="ad-dot" id="adDot" style="background:#f59e0b"></div>
+      <div id="adText">Air quality is moderate. Sensitive people should reduce prolonged outdoor exertion.</div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="panel" role="document">
+      <button class="btn" id="modalClose" style="float:right">Close</button>
+      <h3>Air Quality — Info</h3>
+      <p style="color:var(--muted);margin-top:6px">
+        AQI (Air Quality Index) is based on pollutants like PM2.5, PM10, NO₂, SO₂, CO and O₃.
+        Values: 0–50 Good, 51–100 Moderate, 101–150 Unhealthy for Sensitive, 151–200 Unhealthy, 201+ Very Unhealthy / Hazardous.
+      </p>
+    </div>
+  </div>
+
+  <!-- hidden canvas for exporting -->
+  <canvas id="exportCanvas" width="1080" height="1920"></canvas>
+
+<script>
+/* ---------------- Sample Data (swap with API data) ---------------- */
+let sampleAQ = {
+  aqi: 100,
+  category: 'Moderate',
+  mainPollutant: 'PM2_5',
+  wind: 'E 9.8 km/h',
+  trend: [90,92,95,98,100,102,101,100],
+  pollutants: [
+    { code: 'NO2', value: 51, color: '#f59e0b' },
+    { code: 'O3', value: 11, color: '#10b981' },
+    { code: 'PM10', value: 69, color: '#f59e0b' },
+    { code: 'PM2_5', value: 100, color: '#ef4444' },
+    { code: 'CO', value: 3, color: '#10b981' },
+    { code: 'SO2', value: 15, color: '#10b981' }
+  ]
+};
+
+/* ---------------- Utilities ---------------- */
+const $ = id => document.getElementById(id);
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function mapRange(v,inMin,inMax,outMin,outMax){
+  return outMin + (outMax-outMin) * ((v-inMin)/(inMax-inMin));
+}
+function aqiCategory(aqi){
+  if(aqi <= 50) return { cat: 'Good', color:'#10b981' };
+  if(aqi <= 100) return { cat: 'Moderate', color:'#f59e0b' };
+  if(aqi <= 150) return { cat: 'Unhealthy-SG', color:'#f97316' };
+  if(aqi <= 200) return { cat: 'Unhealthy', color:'#ef4444' };
+  if(aqi <= 300) return { cat: 'Very Unhealthy', color:'#8b5cf6' };
+  return { cat: 'Hazardous', color:'#7e22ce' };
+}
+function healthAdvice(aqi){
+  if(aqi <= 50) return { text:'Air quality is good. Enjoy your day!', color:'#10b981' };
+  if(aqi <= 100) return { text:'Moderate air quality. Sensitive groups should take care.', color:'#f59e0b' };
+  if(aqi <= 150) return { text:'Unhealthy for sensitive groups. Limit prolonged exertion.', color:'#f97316' };
+  if(aqi <= 200) return { text:'Unhealthy. Reduce outdoor activities.', color:'#ef4444' };
+  if(aqi <= 300) return { text:'Very unhealthy. Avoid outdoor exertion.', color:'#8b5cf6' };
+  return { text:'Hazardous. Stay indoors and follow local guidance.', color:'#7e22ce' };
+}
+
+/* ---------------- Render functions ---------------- */
+function renderCard(data){
+  // header & main
+  $('aqValue').textContent = data.aqi;
+  const cat = aqiCategory(data.aqi);
+  $('aqCategory').textContent = cat.cat;
+  $('aqCategory').style.color = cat.color;
+  $('mainPoll').textContent = data.mainPollutant.replace('_','.');
+  $('windVal').textContent = data.wind;
+  $('locLabel').textContent = 'Ranchi · Updated just now';
+
+  // thumb position
+  const pct = clamp(mapRange(data.aqi, 0, 500, 0, 100), 0, 100);
+  $('scaleThumb').style.left = pct + '%';
+
+  // draw sparkline into svg
+  drawSpark(data.trend);
+
+  // pollutants list
+  const polList = $('polList');
+  polList.innerHTML = '';
+  data.pollutants.forEach(p => {
+    const node = document.createElement('div');
+    node.className = 'pol';
+    const intensity = Math.round(mapRange(clamp(p.value,0,200), 0, 200, 12, 100));
+    node.innerHTML = `
+      <small>${p.code.replace('_','.')}</small>
+      <div class="val" style="color:${p.color}">${p.value}</div>
+      <div style="width:100%;height:8px;border-radius:8px;background:rgba(255,255,255,0.03);margin-top:6px;display:flex;align-items:center">
+        <div style="width:${intensity}%;height:6px;border-radius:6px;background:${p.color}"></div>
+      </div>
+    `;
+    polList.appendChild(node);
+  });
+
+  // advice
+  const advice = healthAdvice(data.aqi);
+  $('adText').textContent = advice.text;
+  $('adDot').style.background = advice.color;
+}
+
+/* sparkline */
+function drawSpark(values){
+  const svg = $('spark');
+  const w = svg.viewBox.baseVal.width || 220;
+  const h = svg.viewBox.baseVal.height || 44;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const pad = 6;
+  const points = values.map((v,i)=>{
+    const x = mapRange(i,0,values.length-1,pad,w-pad);
+    const y = mapRange(v,min,max,pad,h-pad);
+    return `${x},${h - y}`;
+  }).join(' ');
+  const gId = 'gSpark';
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="${gId}" x1="0" x2="1">
+        <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.14"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.22"/>
+      </linearGradient>
+    </defs>
+    <polyline points="${points}" fill="none" stroke="url(#${gId})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  `;
+}
+
+/* ---------------- Export to PNG (mobile-friendly portrait) ---------------- */
+function exportCardPNG(){
+  const canvas = $('exportCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = 1080; // portrait phone friendly
+  const H = canvas.height = 1920;
+  ctx.clearRect(0,0,W,H);
+
+  // background
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#071026'); bg.addColorStop(1,'#020617');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  // card area
+  const margin = 60;
+  const cardW = W - margin*2;
+  const cardH = H - margin*2;
+  // round rect path
+  ctx.beginPath();
+  const r = 36;
+  ctx.moveTo(margin + r, margin);
+  ctx.arcTo(margin + cardW, margin, margin + cardW, margin + cardH, r);
+  ctx.arcTo(margin + cardW, margin + cardH, margin, margin + cardH, r);
+  ctx.arcTo(margin, margin + cardH, margin, margin, r);
+  ctx.arcTo(margin, margin, margin + cardW, margin, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 3; ctx.stroke();
+
+  // left big AQI (scaled for export)
+  ctx.fillStyle = '#eaf4ff'; ctx.font = '900 140px Inter, Arial'; ctx.textBaseline = 'top';
+  ctx.fillText(String(sampleAQ.aqi), margin + 60, margin + 60);
+
+  // category
+  const cat = aqiCategory(sampleAQ.aqi);
+  ctx.font = '700 36px Inter, Arial'; ctx.fillStyle = cat.color;
+  ctx.fillText(cat.cat, margin + 360, margin + 88);
+
+  // main pollutant
+  ctx.font = '600 22px Inter, Arial'; ctx.fillStyle = '#cfe8ff';
+  ctx.fillText('Main Pollutant: ' + sampleAQ.mainPollutant.replace('_','.'), margin + 60, margin + 220);
+
+  // draw scale
+  const scaleX = margin + 60, scaleY = margin + 300, scaleW = cardW - 120, scaleH = 26;
+  const g = ctx.createLinearGradient(scaleX,0,scaleX+scaleW,0);
+  g.addColorStop(0,'#10b981'); g.addColorStop(0.3,'#f59e0b'); g.addColorStop(0.5,'#f97316'); g.addColorStop(0.7,'#ef4444'); g.addColorStop(0.9,'#8b5cf6');
+  ctx.fillStyle = g;
+  roundRect(ctx, scaleX, scaleY, scaleW, scaleH, 16); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 2; ctx.stroke();
+
+  // thumb
+  const pct = clamp(mapRange(sampleAQ.aqi,0,500,0,1),0,1);
+  const thumbX = scaleX + pct * scaleW;
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(thumbX, scaleY + scaleH/2, 18, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 3; ctx.stroke();
+
+  // pollutant boxes
+  const boxTop = scaleY + 80;
+  const boxW = Math.floor((cardW - 140) / 3);
+  sampleAQ.pollutants.forEach((p,i)=>{
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const x = margin + 60 + col * (boxW + 20);
+    const y = boxTop + row * (120);
+    roundRect(ctx, x, y, boxW, 100, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.stroke();
+
+    ctx.fillStyle = p.color; ctx.font = '800 40px Inter, Arial'; ctx.fillText(String(p.value), x + 18, y + 18);
+    ctx.fillStyle = '#cfe8ff'; ctx.font = '600 18px Inter, Arial'; ctx.fillText(p.code.replace('_','.'), x + 18, y + 60);
+  });
+
+  // footer text
+  ctx.fillStyle = '#9fb0c8'; ctx.font = '500 18px Inter, Arial';
+  ctx.fillText('Air Quality • Generated by MyWeather', margin + 60, margin + cardH - 60);
+
+  // download
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aqi-${sampleAQ.aqi}.png`;
+  a.click();
+}
+
+/* helper: rounded rectangle path */
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* ---------------- Events & init ---------------- */
+$('infoBtn').addEventListener('click', ()=> {
+  $('modal').style.display = 'flex';
+  $('modal').setAttribute('aria-hidden','false');
+});
+$('modalClose').addEventListener('click', ()=> {
+  $('modal').style.display = 'none';
+  $('modal').setAttribute('aria-hidden','true');
+});
+$('exportBtn').addEventListener('click', ()=> {
+  // show a quick animation hint then export
+  $('exportBtn').textContent = 'Exporting...';
+  setTimeout(()=> {
+    exportCardPNG();
+    $('exportBtn').textContent = 'Export';
+  }, 220);
+});
+$('saveBtn').addEventListener('click', (e)=>{
+  const btn = e.currentTarget;
+  const pressed = btn.getAttribute('aria-pressed') === 'true';
+  btn.setAttribute('aria-pressed', String(!pressed));
+  btn.textContent = !pressed ? 'Saved' : 'Save';
+});
+
+/* ---------------- Init render + demo live updates ---------------- */
+function init(){
+  // seed sampleAQ variable used by export
+  sampleAQ = sampleAQ || sampleAQ; // noop - keep earlier value
+  renderCard(sampleAQ);
+}
+init();
+
+// demo live jitter updates (keeps UI lively in mobile)
+setInterval(()=>{
+  sampleAQ.aqi = Math.max(5, Math.min(350, Math.round(sampleAQ.aqi + (Math.random()-0.5) * 12)));
+  sampleAQ.pollutants.forEach(p => p.value = Math.max(0, Math.round(p.value + (Math.random()-0.5) * 6)));
+  sampleAQ.pollutants.sort((a,b)=>b.value - a.value);
+  sampleAQ.mainPollutant = sampleAQ.pollutants[0].code;
+  sampleAQ.trend.push(sampleAQ.aqi);
+  if(sampleAQ.trend.length > 12) sampleAQ.trend.shift();
+  sampleAQ.wind = ['E','NE','N','W','SW'][Math.floor(Math.random()*5)] + ' ' + (4 + Math.round(Math.random()*14)) + ' km/h';
+  renderCard(sampleAQ);
+}, 4500);
+</script>
+
+</body>
+</html>

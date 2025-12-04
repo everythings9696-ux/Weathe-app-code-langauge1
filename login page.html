@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Login — Weather Tech (replace logo)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1: #02040a;
+    --bg-2: #060814;
+    --card: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.025);
+    --muted: #9fb0c8;
+    --accent: #3b82f6; /* blue login */
+    --accent-2: #60a5fa;
+    --pill: 999px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(40,40,60,0.12), transparent 8%),
+                linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    color: #e6eef8;
+    -webkit-font-smoothing:antialiased;
+    display:flex;align-items:center;justify-content:center;padding:22px;
+  }
+
+  /* Card */
+  .card {
+    width:100%;
+    max-width:420px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:18px;
+    border: 1px solid rgba(255,255,255,0.04);
+    padding:28px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.7);
+    position:relative;
+    overflow: hidden;
+  }
+
+  /* subtle top decorative blob (unique) */
+  .card::before{
+    content:"";
+    position:absolute;right:-120px;top:-80px;width:300px;height:300px;
+    background:linear-gradient(135deg,#7c3aed22,#2563eb22);
+    filter: blur(42px);transform:rotate(18deg);opacity:.6;pointer-events:none;
+  }
+
+  /* Logo area */
+  .logo-wrap {
+    display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:8px;
+  }
+  #brandLogo{
+    width:124px;height:124px;border-radius:22px;object-fit:contain;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:12px;
+    border: 1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 6px 20px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    transition: transform .28s cubic-bezier(.2,.9,.2,1), box-shadow .28s;
+  }
+  #brandLogo:hover{ transform: translateY(-6px) rotate(-2deg); box-shadow: 0 14px 30px rgba(20,30,60,0.45) }
+
+  /* Title text area (below logo) */
+  .heading {
+    text-align:center;
+  }
+  .heading .title {
+    font-size:20px;font-weight:700;letter-spacing:0.6px;color:#fff;
+  }
+  .heading .subtitle {
+    font-size:13px;color:var(--muted);margin-top:4px;
+  }
+
+  /* Form */
+  form{margin-top:18px}
+  .fields{display:flex;flex-direction:column;gap:12px}
+
+  .field {
+    position:relative;
+    background: var(--glass);
+    border-radius:12px;
+    padding:12px 14px;
+    border:1px solid rgba(255,255,255,0.03);
+    backdrop-filter: blur(6px);
+    display:flex;align-items:center;gap:10px;
+    transition: box-shadow .18s, transform .12s;
+  }
+  .field:focus-within { box-shadow: 0 6px 20px rgba(59,130,246,0.12); transform: translateY(-1px); border-color: rgba(59,130,246,0.18) }
+
+  .field input{
+    flex:1;background:transparent;border:0;outline:0;color: #e6eef8;font-size:15px;padding:6px 0;
+  }
+  .field label{
+    position:absolute;left:16px;top:10px;font-size:13px;color:var(--muted);pointer-events:none;transition: transform .12s, font-size .12s, top .12s;
+    transform-origin:left top;
+  }
+  /* floating label when input has value or focus */
+  .field input:focus + label,
+  .field input:not(:placeholder-shown) + label{
+    transform: translateY(-22px) scale(.86);
+    font-size:12px;color:var(--muted);
+    top:6px;
+  }
+
+  /* password toggle button */
+  .eye-btn{
+    background:transparent;border:0;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;
+  }
+
+  /* login button */
+  .login-row{margin-top:6px}
+  .btn-login{
+    width:100%;
+    display:inline-block;
+    padding:14px 16px;
+    border-radius:14px;
+    border:0;
+    font-weight:700;
+    font-size:16px;
+    color:#fff;
+    background: linear-gradient(180deg,var(--accent),var(--accent-2));
+    box-shadow: 0 10px 30px rgba(59,130,246,0.18), 0 3px 0 rgba(0,0,0,0.12) inset;
+    transition: transform .12s cubic-bezier(.2,.9,.2,1), box-shadow .12s;
+  }
+  .btn-login:active{ transform: translateY(1px) scale(.998); box-shadow: 0 6px 18px rgba(59,130,246,0.12) }
+
+  /* links */
+  .links{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:12px}
+  .links a{color:var(--muted);font-size:14px;text-decoration:none}
+  .links a.emph{color:#f3d87a;font-weight:600}
+  .links a.create{color:#7dd3fc;font-weight:600}
+
+  /* small footer note */
+  .footer-note{margin-top:16px;font-size:12px;color:var(--muted);text-align:center}
+
+  /* responsive */
+  @media (max-width:420px){
+    .card{padding:20px;border-radius:16px}
+    #brandLogo{width:104px;height:104px}
+    .heading .title{font-size:18px}
+  }
+
+  /* tiny entry animation to make unique */
+  .card { animation: pop .36s cubic-bezier(.2,.9,.2,1) both }
+  @keyframes pop { from { transform: translateY(10px) scale(.995); opacity:0 } to { transform:none; opacity:1 } }
+
+  /* accessibility high-contrast focus */
+  :focus{ outline: 3px solid rgba(99,102,241,0.14); outline-offset: 2px; border-radius:8px }
+</style>
+</head>
+<body>
+  <main class="card" role="main" aria-labelledby="loginTitle">
+    <div class="logo-wrap" aria-hidden="false">
+      <!-- Replace the src with your logo file or URL -->
+      <img id="brandLogo" src="logo.jpeg" alt="Brand logo">
+      <div class="heading">
+        <div id="loginTitle" class="title">WEATHER TECHNOLOGY</div>
+        <div class="subtitle">Secure sign in to your account</div>
+      </div>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="fields">
+        <div class="field" aria-hidden="false">
+          <input id="email" name="email" type="email" autocomplete="email" placeholder=" " required aria-required="true" />
+          <label for="email">Email</label>
+        </div>
+
+        <div class="field" style="padding-right:8px">
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder=" " required aria-required="true" />
+          <label for="password">Password</label>
+          <button type="button" class="eye-btn" id="togglePwd" aria-label="Show password" title="Show / hide password">
+            <!-- simple eye icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9fb0c8" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3.2"/></svg>
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)">
+            <input id="remember" type="checkbox" style="width:16px;height:16px;accent-color:var(--accent);border-radius:4px" />
+            Remember me
+          </label>
+          <a href="#" id="forgot" style="font-size:13px;color:var(--muted);text-decoration:none">Forgot your password?</a>
+        </div>
+
+        <div class="login-row">
+          <button class="btn-login" type="submit" id="submitBtn">Login</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="links">
+      <a class="emph" href="#" id="needHelp">Need help signing in?</a>
+      <div style="font-size:14px;color:var(--muted)">
+        Don't have an account? <a class="create" href="#" id="createAccount">Create one</a>
+      </div>
+    </div>
+
+    <div class="footer-note" aria-hidden="true">By signing in you agree to our Terms & Privacy</div>
+  </main>
+
+<script>
+  // Replace logo by simply changing src of #brandLogo in markup or dynamically:
+  // document.getElementById('brandLogo').src = 'your-logo.png';
+
+  (function(){
+    const form = document.getElementById('loginForm');
+    const pwd = document.getElementById('password');
+    const toggle = document.getElementById('togglePwd');
+    const submitBtn = document.getElementById('submitBtn');
+    const email = document.getElementById('email');
+
+    // Show/hide password
+    toggle.addEventListener('click', ()=>{
+      const isHidden = pwd.type === 'password';
+      pwd.type = isHidden ? 'text' : 'password';
+      toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      // small icon change (swap fill color)
+      toggle.innerHTML = isHidden
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3.2"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9fb0c8" stroke-width="1.6"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.31 21.31 0 0 1 5.3-6.05"/><path d="M1 1l22 22"/></svg>`;
+    });
+
+    // Simple validation & demo submit (replace with real auth)
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      // basic client-side
+      const em = email.value.trim();
+      const pw = pwd.value.trim();
+      if(!em || !pw){
+        // subtle in-page toast / highlight
+        submitBtn.textContent = 'Fill required';
+        submitBtn.style.background = 'linear-gradient(180deg,#ef4444,#f97316)';
+        setTimeout(()=>{ submitBtn.textContent = 'Login'; submitBtn.style.background = ''; }, 1200);
+        if(!em) email.focus();
+        else pwd.focus();
+        return;
+      }
+
+      // simulate loading
+      submitBtn.disabled = true;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Signing in...';
+      // simulate API call
+      setTimeout(()=>{
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        // for demo, show success or error randomly
+        const ok = Math.random() > 0.15;
+        if(ok){
+          alert('Signed in (demo). Replace this with real auth redirect.');
+        } else {
+          alert('Invalid credentials (demo). Try any non-empty values for demo.');
+        }
+      }, 1100);
+    });
+
+    // Optional: enter key press enhancements
+    [email, pwd].forEach(inp=>{
+      inp.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Enter'){
+          ev.preventDefault();
+          submitBtn.click();
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>

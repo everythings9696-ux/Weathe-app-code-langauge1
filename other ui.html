@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Weather Metrics — Mobile Widgets (With Export & Extra)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#04050a; --bg2:#071026;
+    --card-bg: rgba(255,255,255,0.02);
+    --glass-border: rgba(255,255,255,0.04);
+    --muted:#9fb0c8;
+    --accent:#3b82f6;
+    --radius:14px;
+  }
+  html,body{height:100%;margin:0}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    color:#eaf2ff;padding:14px;-webkit-font-smoothing:antialiased;
+  }
+
+  .container { width:100%; max-width:420px; display:flex; flex-direction:column; gap:10px; }
+
+  /* Top bar: reference + export */
+  .topbar { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .ref { color:var(--muted); font-weight:700; font-size:12px; }
+  .export-btn { padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:linear-gradient(90deg,var(--accent),#7c3aed); color:#fff; font-weight:800; cursor:pointer; box-shadow:0 8px 20px rgba(2,6,23,0.45) }
+
+  .grid {
+    width:100%;
+    display:grid; gap:12px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.006));
+    border:1px solid var(--glass-border);
+    border-radius:var(--radius); padding:12px;
+    box-shadow: 0 16px 36px rgba(2,6,23,0.6);
+    min-height:140px; display:flex;flex-direction:column;justify-content:space-between;
+    overflow:hidden;
+  }
+
+  .card .head { display:flex;justify-content:space-between;align-items:center; gap:8px; margin-bottom:6px; }
+  .card .title{ font-weight:800; font-size:13px; letter-spacing:0.3px; }
+  .card .sub{ color:var(--muted); font-weight:700; font-size:11px; }
+
+  /* Pressure gauge */
+  .gauge-wrap { display:flex;align-items:center;gap:12px; }
+  .gauge { width:110px; height:80px; display:block; }
+  .gauge .centre { text-align:center; font-weight:800; font-size:20px; }
+  .gauge .units { color:var(--muted); font-size:12px; margin-top:4px }
+
+  /* Wind compass */
+  .compass { width:100%; display:flex; align-items:center; gap:10px; justify-content:space-between; }
+  .compass-svg { width:110px; height:110px; }
+  .wind-value { text-align:center; font-weight:800; font-size:22px }
+  .wind-units { color:var(--muted); font-weight:700; font-size:12px }
+
+  /* UV, Visibility, Precipitation, Humidity */
+  .centered { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px; }
+  .big { font-weight:900; font-size:44px; line-height:1; }
+  .desc { color:var(--muted); font-weight:700; font-size:12px; text-align:center }
+
+  .uv-track { width:100%; height:10px; border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.03) }
+  .uv-thumb { position:relative; width:18px; height:18px; border-radius:50%; background:#fff; transform:translateX(-50%); top:-4px; box-shadow:0 10px 20px rgba(2,6,23,0.4); }
+
+  .uv-labels { display:flex; justify-content:space-between; font-weight:700; color:var(--muted); font-size:11px; margin-top:6px; }
+
+  .advice { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; font-weight:700; }
+
+  /* small helper text */
+  .advice { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; font-weight:700; }
+
+  .pol { flex:0 0 calc(33% - 8px); min-width:88px; background:rgba(255,255,255,0.02); border-radius:10px; padding:8px; border:1px solid rgba(255,255,255,0.02); text-align:center; }
+  .pol small{ color:var(--muted); font-weight:700 }
+  .pol .val{ font-weight:800; font-size:18px; }
+
+  /* controls */
+  .controls { grid-column: 1 / -1; display:flex; gap:8px; justify-content:center; margin-top:6px; }
+  .btn { padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:var(--muted); font-weight:800; cursor:pointer; }
+  .btn.primary { background:linear-gradient(90deg,var(--accent),#7c3aed); color:#fff; border:none; box-shadow:0 10px 30px rgba(2,6,23,0.5) }
+
+  @media (max-width:360px){
+    .big{font-size:36px} .gauge{width:94px;height:68px}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top bar with Data reference and Export -->
+    <div class="topbar">
+      <div class="ref" id="dataRef">Data source: Sample • Replace with API</div>
+      <button class="export-btn" id="topExportBtn">Export PNG</button>
+    </div>
+
+    <div class="grid" role="region" aria-label="Weather metrics grid">
+
+      <!-- Pressure Card -->
+      <div class="card" id="pressureCard" role="article" aria-label="Pressure">
+        <div class="head">
+          <div>
+            <div class="title">PRESSURE</div>
+            <div class="sub">mbar</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18" stroke="#cbd5e1" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+
+        <div class="gauge-wrap" style="align-items:center">
+          <svg class="gauge" id="pressureGauge" viewBox="0 0 200 120" aria-hidden="true">
+            <defs>
+              <linearGradient id="gPressure" x1="0" x2="1"><stop offset="0%" stop-color="#10b981"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#ef4444"/></linearGradient>
+            </defs>
+            <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="12" stroke-linecap="round"/>
+            <path id="pressureArc" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#gPressure)" stroke-width="12" stroke-linecap="round" stroke-dasharray="502" stroke-dashoffset="502"/>
+            <g transform="translate(100,100)" id="needleGroup">
+              <line x1="0" y1="0" x2="0" y2="-68" stroke="#fff" stroke-width="3" stroke-linecap="round" />
+              <circle cx="0" cy="0" r="6" fill="#fff"/>
+            </g>
+          </svg>
+
+          <div style="flex:1">
+            <div class="gauge centre">
+              <div id="pressureValue" style="font-size:18px;font-weight:900">1015</div>
+              <div class="units">mbar</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;font-weight:800;color:var(--muted)">
+              <div id="pressureLow">Low</div><div id="pressureHigh">High</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wind Card -->
+      <div class="card" id="windCard" role="article" aria-label="Wind">
+        <div class="head">
+          <div>
+            <div class="title">WIND</div>
+            <div class="sub" id="windDirText">E 9.8 km/h</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20" stroke="#cbd5e1" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+
+        <div class="compass">
+          <svg class="compass-svg" viewBox="0 0 220 220" id="compassSVG" aria-hidden="true">
+            <circle cx="110" cy="110" r="96" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="10"/>
+            <text x="110" y="24" text-anchor="middle" font-weight="800" fill="#cfe8ff">N</text>
+            <text x="110" y="208" text-anchor="middle" font-weight="800" fill="#cfe8ff">S</text>
+            <text x="208" y="114" text-anchor="middle" font-weight="800" fill="#cfe8ff">E</text>
+            <text x="12" y="114" text-anchor="middle" font-weight="800" fill="#cfe8ff">W</text>
+            <g id="windNeedle" transform="translate(110,110) rotate(0)">
+              <path d="M0,-70 L8,-50 L0,-60 L-8,-50 Z" fill="#7c3aed" />
+              <circle cx="0" cy="0" r="6" fill="#fff" />
+              <line x1="0" y1="0" x2="60" y2="0" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+            </g>
+          </svg>
+
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div class="wind-value" id="windSpeed">9.8</div>
+            <div class="wind-units">km/h</div>
+            <div class="advice" style="margin-top:8px">Gusts: <strong id="gustText" style="margin-left:6px;color:#cfe8ff">12 km/h</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UV Index Card -->
+      <div class="card" id="uvCard" role="article" aria-label="UV Index">
+        <div class="head">
+          <div>
+            <div class="title">UV INDEX</div>
+            <div class="sub">Risk level</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="#cbd5e1" stroke-width="1.2"/></svg>
+        </div>
+
+        <div class="centered">
+          <div class="big" id="uvValue">0</div>
+          <div class="desc" id="uvDesc">Low</div>
+
+          <div style="width:100%;margin-top:6px">
+            <div class="uv-track" id="uvTrack" style="background:linear-gradient(90deg,#10b981,#f59e0b,#f97316,#ef4444,#8b5cf6)">
+              <div id="uvThumb" class="uv-thumb" style="left:6%"></div>
+            </div>
+            <div class="uv-labels"><div>0</div><div>2</div><div>4</div><div>6</div><div>11+</div></div>
+          </div>
+
+          <div class="advice" id="uvAdvice">Continued to remain at lower levels.</div>
+        </div>
+      </div>
+
+      <!-- Visibility Card -->
+      <div class="card" id="visCard" role="article" aria-label="Visibility">
+        <div class="head">
+          <div>
+            <div class="title">VISIBILITY</div>
+            <div class="sub">km</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12h20" stroke="#cbd5e1" stroke-width="1.4"/></svg>
+        </div>
+
+        <div class="centered">
+          <div class="big" id="visVal">4.8</div>
+          <div class="desc" id="visText">Poor visibility, unclear field of view</div>
+        </div>
+      </div>
+
+      <!-- Precipitation Card -->
+      <div class="card" id="precipCard" role="article" aria-label="Precipitation">
+        <div class="head">
+          <div>
+            <div class="title">PRECIPITATION</div>
+            <div class="sub">chance & amount</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v14" stroke="#cbd5e1" stroke-width="1.4"/></svg>
+        </div>
+
+        <div class="centered">
+          <div class="big" id="precipVal">25%</div>
+          <div class="desc" id="precipText">Light showers expected • 1.2 mm</div>
+        </div>
+      </div>
+
+      <!-- Humidity Card -->
+      <div class="card" id="humCard" role="article" aria-label="Humidity">
+        <div class="head">
+          <div>
+            <div class="title">HUMIDITY</div>
+            <div class="sub">relative</div>
+          </div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2c0 6-6 8-6 12a6 6 0 0012 0c0-4-6-6-6-12z" stroke="#cbd5e1" stroke-width="1.2" fill="none"/></svg>
+        </div>
+
+        <div class="centered">
+          <div class="big" id="humVal">68%</div>
+          <div class="desc" id="humText">Feels humid • May feel warmer</div>
+        </div>
+      </div>
+
+    </div> <!-- grid -->
+
+    <!-- Action controls (redundant export for convenience if needed) -->
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:6px">
+      <button class="btn" id="refreshBtn">Refresh</button>
+      <button class="btn primary" id="exportBtn">Export PNG</button>
+    </div>
+  </div> <!-- container -->
+
+  <!-- hidden canvas for export -->
+  <canvas id="exportCanvas" width="1080" height="1920" style="display:none"></canvas>
+
+<script>
+/* -------------- Sample data (swap with real API) -------------- */
+let sample = {
+  pressure: 1015, pressureRange: [995,1035],
+  windSpeed: 9.8, windDir: 270, gust: 12,
+  uv: 0, visibility: 4.8,
+  precipChance: 25, precipAmount: 1.2, // percent and mm
+  humidity: 68
+};
+
+/* -------------- Helpers -------------- */
+const $ = id => document.getElementById(id);
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function mapRange(v,inMin,inMax,outMin,outMax){ return outMin + (outMax-outMin) * ((v-inMin)/(inMax-inMin)); }
+function degToCardinal(d){
+  const dirs = ['N','NE','E','SE','S','SW','W','NW','N']; const ix = Math.round((d % 360) / 45); return dirs[ix];
+}
+function aqiCategoryNotUsed(){} // placeholder
+
+/* -------------- Pressure -------------- */
+function renderPressure(){
+  const p = sample.pressure;
+  const minP = 960, maxP = 1040;
+  const pct = clamp(mapRange(p,minP,maxP,0,1),0,1);
+  const arc = $('pressureArc');
+  const total = 502;
+  arc.style.transition = 'stroke-dashoffset 700ms cubic-bezier(.2,.9,.2,1)';
+  arc.style.strokeDashoffset = total * (1 - pct);
+  const angle = mapRange(p,minP,maxP,-90,90);
+  $('needleGroup').style.transform = `translate(100px,100px) rotate(${angle}deg)`;
+  $('pressureValue').textContent = p;
+  $('pressureLow').textContent = sample.pressureRange[0];
+  $('pressureHigh').textContent = sample.pressureRange[1];
+}
+
+/* -------------- Wind -------------- */
+function renderWind(){
+  const speed = sample.windSpeed;
+  const dir = sample.windDir;
+  $('windSpeed').textContent = parseFloat(speed).toFixed(1);
+  $('windDirText').textContent = `${degToCardinal(dir)} · ${parseFloat(speed).toFixed(1)} km/h`;
+  $('gustText').textContent = `${sample.gust} km/h`;
+  $('windNeedle').style.transition = 'transform 600ms cubic-bezier(.2,.9,.2,1)';
+  $('windNeedle').style.transform = `translate(110,110) rotate(${dir}deg)`;
+}
+
+/* -------------- UV -------------- */
+function renderUV(){
+  const uv = sample.uv;
+  $('uvValue').textContent = uv;
+  let desc = 'Low';
+  if(uv <= 2) desc='Low'; else if(uv <= 5) desc='Moderate'; else if(uv <= 7) desc='High'; else if(uv <= 10) desc='Very High'; else desc='Extreme';
+  $('uvDesc').textContent = desc;
+  const pct = clamp(mapRange(uv,0,11,0,100),0,100);
+  $('uvThumb').style.left = pct + '%';
+  $('uvAdvice').textContent = uv <= 2 ? 'Continued to remain at lower levels.' : uv <=5 ? 'Use sunglasses and sunscreen' : 'Take extra precautions.';
+}
+
+/* -------------- Visibility -------------- */
+function renderVis(){
+  $('visVal').textContent = (Math.round(sample.visibility*10)/10).toString();
+  let txt = 'Visibility good';
+  if(sample.visibility < 1) txt = 'Very poor visibility';
+  else if(sample.visibility < 5) txt = 'Poor visibility, unclear field of view';
+  else if(sample.visibility < 10) txt = 'Moderate visibility';
+  $('visText').textContent = txt;
+}
+
+/* -------------- Precipitation & Humidity -------------- */
+function renderPrecipHum(){
+  $('precipVal').textContent = sample.precipChance + '%';
+  $('precipText').textContent = `${sample.precipChance}% chance • ${sample.precipAmount} mm`;
+  $('humVal').textContent = sample.humidity + '%';
+  $('humText').textContent = sample.humidity > 80 ? 'Very humid • May feel warmer' : sample.humidity > 60 ? 'Feels humid • Might feel warmer' : 'Comfortable humidity';
+}
+
+/* -------------- Spark (small) -------------- */
+function drawSparkTrend(){
+  const svg = document.getElementById('spark');
+  if(!svg) return;
+  const vals = sample.trend || [90,92,95,98,100,102,101,100];
+  const w = 220, h = 44;
+  const max = Math.max(...vals), min = Math.min(...vals);
+  const pad = 6;
+  const points = vals.map((v,i)=>{
+    const x = mapRange(i,0,vals.length-1,pad,w-pad);
+    const y = mapRange(v,min,max,pad,h-pad);
+    return `${x},${h - y}`;
+  }).join(' ');
+  svg.innerHTML = `<polyline points="${points}" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.9"/>`;
+}
+
+/* -------------- Full render -------------- */
+function renderAll(){
+  renderPressure(); renderWind(); renderUV(); renderVis(); renderPrecipHum(); drawSparkTrend();
+}
+
+/* -------------- Export combined PNG -------------- */
+function exportGridPNG(){
+  const canvas = $('exportCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = 1080;
+  const H = canvas.height = 1920;
+  ctx.clearRect(0,0,W,H);
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#071026'); g.addColorStop(1,'#020617');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = '#eaf4ff'; ctx.font = '700 44px Inter, Arial';
+  ctx.fillText('Weather Metrics', 60, 80);
+  ctx.font = '500 20px Inter, Arial';
+  ctx.fillStyle = '#9fb0c8';
+  ctx.fillText('Data source: Sample • Replace with API', 60, 118);
+
+  // draw a 3x2 grid of cards
+  const px = 60, py = 160;
+  const pad = 28;
+  const cardW = Math.floor((W - px*2 - pad) / 2);
+  const cardH = 360;
+  const boxes = [
+    { title:'Pressure', body: sample.pressure + ' mbar' },
+    { title:'Wind', body: `${sample.windSpeed} km/h · ${degToCardinal(sample.windDir)}` },
+    { title:'UV Index', body: `${sample.uv} · ${$('uvDesc').textContent}` },
+    { title:'Visibility', body: `${sample.visibility} km` },
+    { title:'Precipitation', body: `${sample.precipChance}% · ${sample.precipAmount} mm` },
+    { title:'Humidity', body: `${sample.humidity}%` }
+  ];
+
+  boxes.forEach((b,i)=>{
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = px + col * (cardW + pad);
+    const y = py + row * (cardH + pad/2);
+    roundRect(ctx, x, y, cardW, cardH, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.fillStyle = '#cfe8ff'; ctx.font = '700 22px Inter, Arial';
+    ctx.fillText(b.title, x + 24, y + 44);
+    ctx.fillStyle = '#eaf4ff'; ctx.font = '800 48px Inter, Arial';
+    ctx.fillText(b.body, x + 24, y + 140);
+  });
+
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a'); a.href = url; a.download = `metrics-${Date.now()}.png`; a.click();
+}
+
+/* -------------- Round rect helper -------------- */
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* -------------- Controls -------------- */
+$('refreshBtn').addEventListener('click', ()=> {
+  // demo jitter; replace with live fetch for real data
+  sample.pressure = Math.round(1000 + Math.random()*50);
+  sample.windSpeed = +(Math.random()*25).toFixed(1);
+  sample.windDir = Math.floor(Math.random()*360);
+  sample.gust = Math.round(5 + Math.random()*20);
+  sample.uv = Math.round(Math.random()*11);
+  sample.visibility = +(Math.random()*12).toFixed(1);
+  sample.precipChance = Math.round(Math.random()*100);
+  sample.precipAmount = +(Math.random()*10).toFixed(1);
+  sample.humidity = Math.round(30 + Math.random()*70);
+  sample.trend = (sample.trend || []).slice(-7); sample.trend.push(sample.pressure);
+  renderAll();
+});
+
+$('exportBtn').addEventListener('click', exportGridPNG);
+$('topExportBtn').addEventListener('click', exportGridPNG);
+
+/* -------------- Init -------------- */
+renderAll();
+
+</script>
+</body>
+</html>

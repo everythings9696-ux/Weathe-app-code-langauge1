@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hourly Forecast — Improved</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#04050a; --bg2:#071026;
+    --muted:#9fb0c8;
+    --accent:#7c3aed;
+    --accent2:#3b82f6;
+    --glass: rgba(255,255,255,0.03);
+    --gap:12px;
+  }
+
+  html,body{height:100%;margin:0}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background: linear-gradient(180deg,var(--bg1),var(--bg2));
+    display:flex;align-items:center;justify-content:center;padding:18px;color:#eaf2ff;
+  }
+
+  .wrap{width:100%;max-width:460px}
+
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;border:1px solid rgba(255,255,255,0.04);
+    padding:14px;box-shadow:0 12px 30px rgba(2,6,23,0.6);position:relative;overflow:visible;
+  }
+
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px}
+  .left{display:flex;align-items:center;gap:10px}
+  .head-title{font-weight:800;font-size:16px;letter-spacing:0.2px}
+  .head-sub{font-size:12px;color:var(--muted);margin-top:4px;font-weight:600}
+  .controls{display:flex;align-items:center;gap:8px}
+
+  .units{display:flex;gap:6px;border-radius:10px;padding:6px;background:transparent;border:1px solid rgba(255,255,255,0.02)}
+  .units button{background:transparent;border:0;color:var(--muted);cursor:pointer;font-weight:700;padding:6px 8px;border-radius:8px}
+  .units button.active{ background:linear-gradient(90deg, rgba(124,58,237,0.10), rgba(59,130,246,0.06)); color:var(--accent); box-shadow:0 6px 18px rgba(2,6,23,0.35) }
+
+  .scroller-area{position:relative;display:flex;align-items:center;gap:8px}
+  .nav-btn{
+    width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 6px;
+    box-shadow:0 8px 20px rgba(2,6,23,0.45);
+  }
+  .nav-btn[disabled]{opacity:0.35;cursor:not-allowed}
+  .nav-btn:active{transform:translateY(1px)}
+
+  .hours{
+    display:flex;gap:var(--gap);overflow-x:auto;padding:12px 6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x: contain;touch-action: pan-x;scrollbar-width: thin;scrollbar-color: rgba(255,255,255,0.03) transparent;
+  }
+  .hours::-webkit-scrollbar{height:8px}
+  .hours::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.03);border-radius:8px}
+
+  .hour{
+    scroll-snap-align:center;flex: 0 0 auto;width:96px;min-width:78px;background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03);box-shadow: 0 6px 18px rgba(2,6,23,0.45);transition: transform .18s cubic-bezier(.2,.9,.2,1), box-shadow .18s, background .18s;user-select:none;position:relative;
+  }
+  .hour:active{ transform: translateY(2px) }
+  .hour:hover{ transform: translateY(-4px) }
+  .hour.focused{ transform: scale(1.08); box-shadow: 0 20px 46px rgba(2,6,23,0.7); background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015)); }
+
+  .time{font-weight:800;font-size:13px;margin-bottom:6px}
+  .icon{width:36px;height:36px;margin-bottom:6px;display:flex;align-items:center;justify-content:center}
+  .temp{font-weight:800;font-size:16px}
+  .prec{font-size:11px;color:var(--muted);margin-top:6px}
+
+  /* small sparkline (tiny) */
+  .spark{position:absolute;left:10px;right:10px;bottom:8px;height:28px;opacity:0.12;pointer-events:none}
+
+  .center-indicator{position:absolute;left:50%;transform:translateX(-50%);top:42%;width:118px;height:118px;border-radius:50%;pointer-events:none;border:1px dashed rgba(255,255,255,0.03);mix-blend-mode:overlay;opacity:0.12}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  @media (max-width:420px){.wrap{max-width:380px}.hour{width:88px}}
+  @media (max-width:360px){.hour{width:78px;padding:8px}.icon{width:30px;height:30px}}
+
+  /* focus-visible for accessibility */
+  .hour:focus-visible{outline:3px solid rgba(59,130,246,0.14);outline-offset:3px;border-radius:12px}
+
+  /* reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .hour,.hours{transition:none;scroll-behavior:auto}
+  }
+
+</style>
+</head>
+<body>
+  <div class="wrap" role="region" aria-label="Hourly forecast (smooth horizontal)">
+    <div class="card" role="group" aria-labelledby="hourlyTitle">
+      <div class="card-head">
+        <div class="left">
+          <div aria-hidden="true" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.03)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#cbd5e1" stroke-width="1.2"/><path d="M12 7v6l4 2" stroke="#cbd5e1" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div id="hourlyTitle" class="head-title">Hourly Forecast</div>
+            <div class="head-sub" id="headSub">Use arrows, swipe or ← → keys</div>
+          </div>
+        </div>
+
+        <div class="controls" role="toolbar" aria-label="Forecast controls">
+          <div class="units" role="tablist" aria-label="Temperature units">
+            <button id="uC" aria-pressed="true" class="active">°C</button>
+            <button id="uF" aria-pressed="false">°F</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroller-area" aria-hidden="false">
+        <button class="nav-btn" id="btnLeft" aria-label="Previous hours" title="Previous"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#cbd5e1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+        <div class="hours" id="hours" role="list" tabindex="0" aria-label="Hourly tiles">
+          <!-- JS inserts tiles here -->
+        </div>
+
+        <button class="nav-btn" id="btnRight" aria-label="Next hours" title="Next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#cbd5e1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+        <div class="center-indicator" aria-hidden="true"></div>
+      </div>
+
+      <div id="liveAnnounce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Utilities & state ---------- */
+const HOURS_EL = document.getElementById('hours');
+const BTN_LEFT = document.getElementById('btnLeft'), BTN_RIGHT = document.getElementById('btnRight');
+const UNIT_KEY = 'hourly_unit_v1';
+const BTN_C = document.getElementById('uC'), BTN_F = document.getElementById('uF');
+const LIVE = document.getElementById('liveAnnounce');
+
+let currentIndex = 0; // global current focused tile index
+
+function getUnit(){ return localStorage.getItem(UNIT_KEY) || 'C' }
+function setUnit(u){ localStorage.setItem(UNIT_KEY,u) }
+function cToF(c){ return Math.round((c*9/5)+32) }
+function fmtTemp(c, unit){ return unit === 'C' ? `${Math.round(c)}°` : `${cToF(c)}°` }
+
+/* Align times to whole hours so hours tiles show exact hours */
+function makeSampleHours(n=24){
+  const out=[]; const now=new Date(); now.setMinutes(0,0,0); // snap to hour
+  const baseTemp = 20 + Math.round((Math.random()-0.5)*4);
+  for(let i=0;i<n;i++){
+    const dt = new Date(now.getTime() + i*60*60*1000);
+    const hr = dt.getHours();
+    let cond='Clear';
+    if(hr>=18||hr<=5) cond='Clear Night';
+    if(hr>=6&&hr<=10) cond=Math.random()>0.82?'Fog':'Clear';
+    if(hr>=11&&hr<=16) cond=Math.random()>0.82?'Clouds':'Sunny';
+    if(Math.random()>0.94) cond='Rain';
+    const temp = baseTemp + Math.round(Math.sin((i/12)*Math.PI)*3) + Math.round((Math.random()-0.5)*1.4);
+    const precip = cond==='Rain' ? 60+Math.round(Math.random()*30) : Math.round(Math.random()*20);
+    out.push({ timeLabel: dt.toLocaleTimeString([], {hour:'numeric',hour12:true}), hour24: dt.getHours(), tempC: temp, cond, precip, date: dt });
+  }
+  return out;
+}
+
+let samples = makeSampleHours(24);
+
+/* ---------- Icons (same as before) ---------- */
+function iconFor(cond, h24){
+  const lc=cond.toLowerCase();
+  if(lc.includes('rain')) return svgIcon('rain');
+  if(lc.includes('fog')) return svgIcon('fog');
+  const night = (h24>=18||h24<=5);
+  if(lc.includes('clear') && night) return svgIcon('moon');
+  if(lc.includes('clear')) return svgIcon('sun');
+  if(lc.includes('cloud')) return svgIcon('cloud');
+  return svgIcon('sun');
+}
+function svgIcon(n){
+  if(n==='sun') return `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="#facc15"/><g stroke="#facc15" stroke-width="1.2" stroke-linecap="round"><path d="M12 2v2.8"/><path d="M12 21.2V24"/><path d="M4.93 4.93l1.98 1.98"/><path d="M17.09 17.09l1.98 1.98"/><path d="M2 12h2.8"/><path d="M19.2 12H22"/><path d="M4.93 19.07l1.98-1.98"/><path d="M17.09 6.91l1.98-1.98"/></g></svg>`;
+  if(n==='moon') return `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><path d="M21 12.79A8.999 8.999 0 0111.21 3 7 7 0 0021 12.79z" fill="#b6dfff"/></svg>`;
+  if(n==='cloud') return `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><path d="M20 17H7a4 4 0 010-8c.3 0 .6.02.9.06A6 6 0 0120 12a4 4 0 010 5z" fill="#cbd5e1" fill-opacity="0.12"/></svg>`;
+  if(n==='rain') return `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><path d="M20 16H6a4 4 0 010-8c.3 0 .6.02.9.06A6 6 0 0120 11a4 4 0 010 5z" fill="#cbd5e1" fill-opacity="0.06"/><g stroke="#60a5fa" stroke-width="1.6" stroke-linecap="round"><path d="M8 18l0 2"/><path d="M12 18l0 2"/><path d="M16 18l0 2"/></g></svg>`;
+  if(n==='fog') return `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><path d="M3 16h18M4 12h16M2 20h20" stroke="#9fb0c8" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+  return '';
+}
+
+/* ---------- Render tiles with small sparkline for context ---------- */
+function makeSparkline(data){
+  const vals = data.map(d=>d.tempC);
+  const min = Math.min(...vals), max=Math.max(...vals);
+  const w=84, h=24;
+  const step = vals.length > 1 ? w/(vals.length-1) : w;
+  // build safe path
+  let path=''; vals.forEach((v,i)=>{
+    const denom = (max-min) || 1;
+    const x = Math.round(i*step);
+    const y = Math.round(h - ((v-min)/denom)*(h-4)) + 2;
+    path += (i===0?`M ${x} ${y}`:` L ${x} ${y}`);
+  });
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-hidden="true"><path d="${path}" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function renderTiles(){
+  HOURS_EL.innerHTML='';
+  const unit = getUnit();
+
+  // set active class for unit buttons to reflect stored unit
+  if(unit==='C'){ BTN_C.classList.add('active'); BTN_C.setAttribute('aria-pressed','true'); BTN_F.classList.remove('active'); BTN_F.setAttribute('aria-pressed','false'); }
+  else { BTN_F.classList.add('active'); BTN_F.setAttribute('aria-pressed','true'); BTN_C.classList.remove('active'); BTN_C.setAttribute('aria-pressed','false'); }
+
+  // precompute sparkline over samples
+  const spark = makeSparkline(samples);
+  samples.forEach((h, i)=>{
+    const div = document.createElement('div');
+    div.className='hour'; div.setAttribute('role','listitem'); div.setAttribute('tabindex','0');
+    div.innerHTML = `\n      <div class="time">${h.timeLabel}</div>\n      <div class="icon" aria-hidden="true">${iconFor(h.cond,h.hour24)}</div>\n      <div class="temp">${fmtTemp(h.tempC,unit)}</div>\n      <div class="prec" aria-label="Precipitation">${h.prec}%</div>\n      ${spark}\n    `;
+    div.setAttribute('aria-label', `${h.timeLabel}, ${h.cond}, ${fmtTemp(h.tempC,unit)}, ${h.prec} percent chance of precipitation`);
+    div.addEventListener('click', ()=> focusTile(div));
+    div.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' ') { e.preventDefault(); div.click(); } });
+    HOURS_EL.appendChild(div);
+  });
+
+  // after adding children, snap to center (initial)
+  requestAnimationFrame(()=> snapToCenterNearest(true));
+}
+
+/* ---------- Focus, snap and keyboard nav ---------- */
+function focusTile(el, announce=true){
+  document.querySelectorAll('.hour').forEach(n=>n.classList.remove('focused'));
+  el.classList.add('focused');
+  // compute scroll so element is centered
+  const scrollerRect = HOURS_EL.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const scrollLeft = HOURS_EL.scrollLeft;
+  const target = Math.round(scrollLeft + (elRect.left + elRect.width/2) - (scrollerRect.left + scrollerRect.width/2));
+  // use smooth but respect reduced motion
+  const smooth = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  HOURS_EL.scrollTo({ left: target, behavior: smooth });
+
+  // update currentIndex
+  const tiles = Array.from(HOURS_EL.children);
+  currentIndex = tiles.indexOf(el);
+  updateNavButtons(currentIndex);
+
+  if(announce){ LIVE.textContent = el.getAttribute('aria-label'); }
+}
+
+let scrollTimeout = null;
+HOURS_EL.addEventListener('scroll', ()=>{
+  document.querySelectorAll('.hour.focused').forEach(n=>n.classList.remove('focused'));
+  if(scrollTimeout) clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(()=>{ snapToCenterNearest(); }, 110);
+});
+
+function snapToCenterNearest(initial=false){
+  const rect = HOURS_EL.getBoundingClientRect();
+  const centerX = rect.left + rect.width/2;
+  const tiles = Array.from(HOURS_EL.children);
+  if(tiles.length===0) return;
+  let nearest = tiles[0], minDist = Infinity, nearestIndex = 0;
+  tiles.forEach((t, idx)=>{
+    const r = t.getBoundingClientRect();
+    const c = r.left + r.width/2;
+    const dist = Math.abs(c - centerX);
+    if(dist < minDist){ minDist = dist; nearest = t; nearestIndex = idx; }
+  });
+
+  // focus (but don't re-announce if initial)
+  focusTile(nearest, !initial);
+
+  // visual polish: add focused class after a small delay
+  setTimeout(()=>{ tiles.forEach(t=>t.classList.remove('focused')); nearest.classList.add('focused'); }, 320);
+}
+
+function updateNavButtons(currentIdx){
+  const n = HOURS_EL.children.length;
+  BTN_LEFT.disabled = currentIdx <= 0;
+  BTN_RIGHT.disabled = currentIdx >= n-1;
+}
+
+BTN_LEFT.addEventListener('click', ()=>{ smoothScrollByTile(-1); });
+BTN_RIGHT.addEventListener('click', ()=>{ smoothScrollByTile(1); });
+
+function smoothScrollByTile(direction){
+  const tiles = Array.from(HOURS_EL.children);
+  if(tiles.length===0) return;
+  let idx = tiles.findIndex(t=>t.classList.contains('focused'));
+  if(idx < 0) idx = currentIndex || 0;
+  let next = idx + direction; next = Math.max(0, Math.min(tiles.length-1, next));
+  focusTile(tiles[next]); tiles[next].focus();
+}
+
+/* keyboard navigation when hours container focused */
+HOURS_EL.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight'){ e.preventDefault(); smoothScrollByTile(1); }
+  if(e.key === 'ArrowLeft'){ e.preventDefault(); smoothScrollByTile(-1); }
+});
+
+/* prevent parent overscroll on touch */
+['touchstart','touchmove','touchend','pointerdown','pointermove','pointerup'].forEach(ev=>{
+  HOURS_EL.addEventListener(ev, (e)=> { e.stopPropagation(); }, {passive:true});
+});
+
+/* unit toggles */
+BTN_C.addEventListener('click', ()=>{ setUnit('C'); renderTiles(); });
+BTN_F.addEventListener('click', ()=>{ setUnit('F'); renderTiles(); });
+
+window.addEventListener('resize', ()=>{ setTimeout(()=> snapToCenterNearest(), 160); });
+
+/* init */
+if(!localStorage.getItem(UNIT_KEY)) setUnit('C');
+renderTiles();
+
+/* ensure nav buttons are correct once DOM is ready (safety) */
+setTimeout(()=> {
+  // find currently focused tile index
+  const tiles = Array.from(HOURS_EL.children);
+  const found = tiles.findIndex(t=>t.classList.contains('focused'));
+  currentIndex = found >= 0 ? found : 0;
+  updateNavButtons(currentIndex);
+}, 420);
+
+/* live-ish updates to demonstrate dynamic behaviour */
+setInterval(()=> {
+  samples = samples.map(s => ({ ...s, tempC: Math.max(-40, s.tempC + (Math.random()-0.5)*0.7), precip: Math.max(0, Math.min(100, s.precip + Math.round((Math.random()-0.5)*4))) }));
+  document.querySelectorAll('.hour').forEach((el, i) => {
+    const data = samples[i]; if(!data) return;
+    el.querySelector('.temp').textContent = fmtTemp(data.tempC, getUnit());
+    el.querySelector('.prec').textContent = `${data.prec}%`;
+    el.setAttribute('aria-label', `${data.timeLabel}, ${data.cond}, ${fmtTemp(data.tempC,getUnit())}, ${data.prec} percent chance of precipitation`);
+  });
+}, 60_000);
+
+</script>
+</body>
+</html>
